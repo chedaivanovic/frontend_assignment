@@ -11,11 +11,22 @@
 
 <body>
     <div id="app">
-        <div class="app-label">
+        <div id="app-label">
             <p>App book - New book</p>
         </div>
         <div id="app-heading">
-
+            <div id="breadcrumbs">
+                <div class="breadcrumb breadcrumb-1">1</div>
+                <div class="breadcrumb breadcrumb-2">2</div>
+                <div class="breadcrumb" id="breadcrumb-dots">...</div>
+                <div id="breadcrumbs-short">
+                    <div class="breadcrumb breadcrumb-3">3</div>
+                </div>
+                <div id="breadcrumbs-long">
+                    <div class="breadcrumb breadcrumb-3">3</div>
+                    <div class="breadcrumb breadcrumb-4">4</div>
+                </div>
+            </div>
         </div>
         <div id="app-body">
 
@@ -25,7 +36,11 @@
         </div>
     </div>
     <div id="app-success">
-
+        <div class="check-mark">
+            <span>&#x2713;</span>
+        </div>
+        <p>Book Added Succeffully!</p>
+        <button id="button-success">Add another book</button>
     </div>
     <script src="prod/js/app.js"></script>
 </body>

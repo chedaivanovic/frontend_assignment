@@ -26,9 +26,11 @@ let theBook = {
     book_lang: '',
     book_description: ''
 };
-const newBtn = {
+let newBtn = {
     id: '0',
-    name: 'New'
+    name: 'New',
+    new_name: '',
+    isDescriptionRequired: ''
 };
 let authors = [
     {
@@ -74,43 +76,43 @@ let authors = [
 ]
 let publishers = [
     {
-        name: 'Publisher 1',
+        name: 'Super Books',
         id: '1'
     },
     {
-        name: 'Publisher 2',
+        name: 'Star Books',
         id: '2'
     },
     {
-        name: 'Publisher 3',
+        name: 'Read&Advance',
         id: '3'
     }
 ]
 let formats = [
     {
-        name: 'Format 1',
+        name: 'A4',
         id: '1'
     },
     {
-        name: 'Format 2',
+        name: 'A5',
         id: '2'
     },
     {
-        name: 'Format 3',
+        name: 'A2',
         id: '3'
     }
 ]
 let langs = [
     {
-        name: 'Language 1',
+        name: 'Serbian',
         id: '1'
     },
     {
-        name: 'Language 2',
+        name: 'Deutch',
         id: '2'
     },
     {
-        name: 'Language 3',
+        name: 'English',
         id: '3'
     }
 ]
@@ -137,14 +139,32 @@ const appSuccess = getId('app-success');
 fetch(`/data/data.json`).then(response => {
     return response.json();
 }).then(data => {
-    let createFooterBtns = () => {
-        if (currentPage != 1) {
-            let backBtn = crEl('button');
-            backBtn.classList.add('disabled', 'footer-btn', 'footer-btn-back');
-            backBtn.id = 'back-btn';
-            backBtn.innerHTML = 'Back';
-            appFooter.append(backBtn);
-        }
+    //Footer Buttons
+    let createFooterBtnPrev = (location) => {
+        let backBtn = crEl('button');
+        backBtn.classList.add('footer-btn', 'footer-btn-back');
+        backBtn.id = 'back-btn';
+        backBtn.type = 'button';
+        backBtn.innerHTML = 'Back';
+        backBtn.addEventListener('click', (e) => {
+            switch (currentPage) {
+                case (4):
+                    currentPage--;
+                    page3();
+                    break;
+                case (3):
+                    currentPage--;
+                    page2(theBook.selected_genre);
+                    break;
+                case (2):
+                    currentPage--;
+                    page1();
+                    break;
+            }
+        });
+        location.append(backBtn);
+    }
+    let createFooterBtnNext = (location) => {
         let nextBtn = crEl('button');
         nextBtn.classList.add('disabled', 'footer-btn', 'footer-btn-next');
         nextBtn.disabled = true;
@@ -160,9 +180,23 @@ fetch(`/data/data.json`).then(response => {
                     inputName = 'subgenre';
                     break;
                 default:
-                    inputName = 'some';
+                    inputName = 'nogenre';
             }
-            let selectedValue = parseInt(appBody.querySelector(`input[name="select-${inputName}"]:checked`).value);
+            let inpSelect = appBody.querySelector(`input[name="select-${inputName}"]:checked`);
+            let selectedValue;
+            if (inpSelect) {
+                selectedValue = parseInt(inpSelect.value);
+            } else {
+                selectedValue = getClass('subgenre-input')[0].value;
+                theBook.selected_subgenre = selectedValue;
+                newBtn.new_name = selectedValue;
+                if (getId('new-subgenred-req-check').checked)
+                    newBtn.isDescriptionRequired = true;
+                else
+                    newBtn.isDescriptionRequired = false;
+                currentPage++;
+                finalPage(newBtn);
+            }
             switch (currentPage) {
                 case (1):
                     currentPage++;
@@ -180,11 +214,90 @@ fetch(`/data/data.json`).then(response => {
                     break;
             };
         });
-        appFooter.append(nextBtn);
+        location.append(nextBtn);
     }
-
+    let createFooterBtnAdd = (location) => {
+        let addBtn = crEl('input');
+        addBtn.classList.add('footer-btn', 'footer-btn-add');
+        addBtn.id = 'add-btn';
+        addBtn.value = 'Add';
+        addBtn.type = 'submit';
+        location.append(addBtn);
+    }
+    //Form Elements (inputs, select, labels, textareas)
+    let createFormEl = (destination, tagName, inpType, plHold, tagId, optionsArr = '', requir = false) => {
+        let newInput = crEl(tagName);
+        newInput.type = inpType;
+        newInput.id = tagId;
+        if (tagName === 'select') {
+            newInput.placeholder = plHold;
+            for (let option of optionsArr) {
+                let newOption = crEl('option');
+                newOption.value = option.id;
+                newOption.innerHTML = option.name;
+                newInput.append(newOption);
+            }
+        } else if (inpType != 'date') {
+            newInput.placeholder = plHold;
+        } else {
+            newInput.max = new Date().toISOString().split("T")[0];
+        }
+        if (tagName === 'textarea' && requir === true) {
+            newInput.setAttribute('required', requir);
+        } else if (inpType === 'checkbox') {
+            newInput.setAttribute('required', false)
+        } else if (inpType === 'number') {
+            newInput.min = 1;
+        } else if (tagName != 'textarea') {
+            newInput.setAttribute('required', true);
+        }
+        let bookInpLabel = crEl('label');
+        bookInpLabel.classList.add('unstyled-label');
+        bookInpLabel.setAttribute('for', tagId);
+        bookInpLabel.innerHTML = plHold;
+        if (inpType === 'checkbox') {
+            destination.append(newInput);
+            destination.append(bookInpLabel);
+        } else {
+            destination.append(bookInpLabel);
+            destination.append(newInput);
+        }
+    }
+    //Enable - Disable Next Button Functions
     let unDisable = () => {
         getId('next-btn').removeAttribute('disabled');
+        getId('next-btn').classList.remove('disabled');
+    }
+    let addDisable = () => {
+        getId('next-btn').setAttribute('disabled', true);
+        getId('next-btn').classList.add('disabled');
+    }
+    let selectBreadcrumb = () => {
+        let cp = currentPage;
+        let allBcs = getClass('breadcrumb');
+        for (let breadc of allBcs) {
+            if (breadc.classList.contains('bc-active'))
+                breadc.classList.remove('bc-active');
+        };
+        let cpBreadcrumb = getClass(`breadcrumb-${cp}`);
+        for (cpBc of cpBreadcrumb) {
+            cpBc.classList.add('bc-active');
+        }
+    }
+    let showLongBcs = () => {
+        getId('breadcrumb-dots').style.display = 'none';
+        getId('breadcrumbs-short').style.display = 'none';
+        getId('breadcrumbs-long').style.display = 'flex';
+    }
+    let showShortBcs = () => {
+        getId('breadcrumb-dots').style.display = 'none';
+        getId('breadcrumbs-long').style.display = 'none';
+        getId('breadcrumbs-short').style.display = 'flex';
+    }
+    let showBcDots = () => {
+        getId('breadcrumbs-long').style.display = 'none';
+        getId('breadcrumbs-short').style.display = 'none';
+        getId('breadcrumb-dots').style.display = 'flex';
     }
     // Pages
     let page1 = () => {
@@ -198,7 +311,9 @@ fetch(`/data/data.json`).then(response => {
                 }
             })
         }
-        createFooterBtns();
+        showBcDots();
+        selectBreadcrumb();
+        createFooterBtnNext(appFooter);
     }
 
     let page2 = (selectedGenre) => {
@@ -218,19 +333,38 @@ fetch(`/data/data.json`).then(response => {
             if (getId('next-btn').disabled == true) {
                 unDisable();
             }
-        })
-        createFooterBtns();
+        });
+        showBcDots();
+        selectBreadcrumb();
+        createFooterBtnPrev(appFooter);
+        createFooterBtnNext(appFooter);
     }
 
     let page3 = () => {
         empty(appBody);
         empty(appFooter);
-        let newPageInput = crEl('input');
-        newPageInput.type = 'text';
-        newPageInput.placeholder = 'Subgenre name';
-        newPageInput.id = 'new-subgenre-name';
-        appBody.append(newPageInput);
-        createFooterBtns();
+        let newInput = crEl('input');
+        newInput.type = 'text';
+        newInput.classList.add('subgenre-input');
+        newInput.placeholder = 'Subgenre name';
+        newInput.setAttribute('required', true);
+        appBody.append(newInput);
+        createFormEl(appBody, 'input', 'checkbox', 'Description is requiered for this subgenre', 'new-subgenred-req-check',);
+
+        createFooterBtnPrev(appFooter);
+        createFooterBtnNext(appFooter);
+
+        let subgenreInp = getClass('subgenre-input')[0];
+
+        subgenreInp.addEventListener('keyup', () => {
+            if (subgenreInp.value.length > 2 && document.getElementById('next-btn').classList.contains('disabled')) {
+                unDisable();
+            } else if (subgenreInp.value.length <= 2 && !document.getElementById('next-btn').classList.contains('disabled')) {
+                addDisable();
+            }
+        })
+        showLongBcs();
+        selectBreadcrumb();
     }
 
     let finalPage = (selectedSubGenre) => {
@@ -241,97 +375,87 @@ fetch(`/data/data.json`).then(response => {
         };
         empty(appBody);
         empty(appFooter);
+
         let finalForm = crEl('form');
         finalForm.id = 'book-form';
-        let formInputs = [];
-        let bookTitle = crEl('input');
-        bookTitle.type = 'text';
-        bookTitle.placeholder = 'Book title';
-        formInputs[0] = bookTitle;
+        finalForm.setAttribute('method', 'POST');
+        finalForm.setAttribute('action', 'postbook.js')
 
-        let bookAuthor = crEl('select');
-        bookAuthor.id = 'select-author';
-        for(let author of authors){
-            let newOption = crEl('option');
-            newOption.value = author.id;
-            newOption.innerHTML = author.name;
-            newOption.id = `author-${author.id}`;
-            bookAuthor.append(newOption);
-        }
-        formInputs[1] = bookAuthor;
+        createFormEl(finalForm, 'input', 'text', 'Book Title', 'book-title');
+        createFormEl(finalForm, 'input', 'text', 'Book Author', 'book-author');
+        createFormEl(finalForm, 'input', 'text', 'ISBN', 'book-isbn');
+        createFormEl(finalForm, 'select', 'text', 'Publisher', 'select-publisher', publishers);
+        createFormEl(finalForm, 'input', 'date', 'Date published', 'book-date');
+        createFormEl(finalForm, 'input', 'number', 'Number of pages', 'book-pages');
+        createFormEl(finalForm, 'select', 'text', 'Book format', 'select-format', formats);
+        createFormEl(finalForm, 'input', 'number', 'Edition', 'book-edition');
+        createFormEl(finalForm, 'select', 'text', 'Book language', 'select-lang', langs);
+        createFormEl(finalForm, 'textarea', 'text', 'Description', 'book-description', '', isDescReq);
 
-        let bookISBN = crEl('input');
-        bookISBN.id = 'book-isbn';
-        bookISBN.placeholder = 'ISBN';
-        bookISBN.type = 'text';
-        formInputs[2] = bookISBN;
+        let formBtnsDiv = crEl('div');
+        formBtnsDiv.classList.add('form-footer-btns');
+        createFooterBtnPrev(formBtnsDiv);
+        createFooterBtnAdd(formBtnsDiv);
+        finalForm.append(formBtnsDiv);
 
-        let bookPublisher = crEl('select');
-        bookPublisher.id = 'select-publisher';
-        for(let publisher of publishers){
-            let newOption = crEl('option');
-            newOption.value = publisher.id;
-            newOption.innerHTML = publisher.name;
-            newOption.id = `publisher-${publisher.id}`;
-            bookPublisher.append(newOption);
-        }
-        formInputs[3] = bookPublisher;
+        appBody.append(finalForm);
+        if(getId('breadcrumbs-long').style.display === 'none')
+            showShortBcs();
+        selectBreadcrumb();
+        getId('book-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (newBtn.new_name != '')
+                theBook.selected_subgenre.name = newBtn.new_name;
+            theBook.book_title = getId('book-title').value;
+            theBook.book_author = getId('book-author').value;
+            theBook.book_ISBN = getId('book-isbn').value;
+            theBook.book_publisher = publishers.find(publ => publ.id === getId('select-publisher').value).name;
+            theBook.book_date = getId('book-date').value;
+            theBook.book_pagesno = getId('book-pages').value;
+            theBook.book_format = formats.find(fmat => fmat.id === getId('select-format').value).name;
+            theBook.book_edition = getId('book-edition').value;
+            theBook.book_lang = langs.find(lng => lng.id === getId('select-lang').value).name;
+            theBook.book_description = getId('book-description').value != '' ? getId('book-description').value : 'User did not enter the description for this Book!';
 
-        let bookDate = crEl('input');
-        bookDate.id = 'book-date';
-        bookDate.placeholder = 'Date published';
-        bookDate.type = 'date';
-        formInputs[4] = bookDate;
+            console.log('NEW BOOK INPUT!', '\n',
+                `Book Name: ${theBook.book_title}`, '\n',
+                `Book author: ${theBook.book_author}`, '\n',
+                `Genre & Subgenre: ${theBook.selected_genre.name}, ${theBook.selected_subgenre.name}`, '\n',
+                `Book ISBN: ${theBook.book_ISBN}`, '\n',
+                `Book Publisher: ${theBook.book_publisher}`, '\n',
+                `Book publish date: ${theBook.book_date}`, '\n',
+                `Number of pages: ${theBook.book_pagesno} pages`, '\n',
+                `Book Format: ${theBook.book_format}`, '\n',
+                `Edition: ${theBook.book_edition}`, '\n',
+                `Edition Language: ${theBook.book_lang}`, '\n',
+                `Short description: ${theBook.book_description}`);
+            getId('app').style.display = 'none';
+            getId('app-success').style.display = 'block';
+            getId('button-success').addEventListener('click', () => {
+                theBook = {
+                    selected_genre: '',
+                    selected_subgenre: '',
+                    book_title: '',
+                    book_author: '',
+                    book_ISBN: '',
+                    book_publisher: '',
+                    book_date: '',
+                    book_pagesno: '',
+                    book_format: '',
+                    book_edition: '',
+                    book_lang: '',
+                    book_description: ''
+                };
+                newBtn.name = 'New';
+                newBtn.new_name = '';
+                newBtn.isDescriptionRequired = '';
 
-        let bookPages = crEl('input');
-        bookPages.id = 'book-pages';
-        bookPages.placeholder = 'Number of pages';
-        bookPages.type = 'number';
-        formInputs[5] = bookPages;
-
-        let bookFormat = crEl('select');
-        bookFormat.id = 'select-format';
-        for(let format of formats){
-            let newOption = crEl('option');
-            newOption.value = format.id;
-            newOption.innerHTML = format.name;
-            newOption.id = `format-${format.id}`;
-            bookFormat.append(newOption);
-        }
-        formInputs[6] = bookFormat;
-
-        let bookEdition = crEl('input');
-        bookEdition.id = 'book-edition';
-        bookEdition.placeholder = 'Edition';
-        bookEdition.type = 'number';
-        formInputs[7] = bookEdition;
-
-        let bookLangs = crEl('select');
-        bookLangs.id = 'select-lang';
-        for(let lang of langs){
-            let newOption = crEl('option');
-            newOption.value = lang.id;
-            newOption.innerHTML = lang.name;
-            newOption.id = `lang-${lang.id}`;
-            bookLangs.append(newOption);
-        }
-        formInputs[8] = bookLangs;
-
-        let bookDescription = crEl('textarea');
-        bookDescription.id = 'book-description';
-        bookDescription.placeholder = 'Description';
-        bookDescription.type = 'number';
-        formInputs[9] = bookDescription;
-        console.log(formInputs)
-        for(let formInp of formInputs){
-            console.log(formInp);
-            let bookInpLabel = crEl('label');
-            bookInpLabel.classList.add('unstyled-label');
-            bookInpLabel.setAttribute('for', formInp.id);
-            bookInpLabel.innerHTML = formInp.placeholder;
-            appBody.append(bookInpLabel);
-            appBody.append(formInp);
-        }
+                currentPage = 1;
+                page1();
+                getId('app-success').style.display = 'none';
+                getId('app').style.display = 'block';
+            });
+        });
     }
 
     page1();
